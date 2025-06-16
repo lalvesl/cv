@@ -22,20 +22,19 @@
       for_each_system = nixpkgs.lib.genAttrs supportedSystems;
 
       pkgs = for_each_system (system: import nixpkgs { inherit system; });
-      tex_pkgs = for_each_system (
-        system:
-        pkgs.${system}.texlive.combine {
+      general_pkgs = for_each_system (system: [
+        (pkgs.${system}.texlive.combine {
           inherit (pkgs.${system}.texlive) scheme-full abntex2;
-        }
-      );
+        })
+        pkgs.${system}.material-design-icons
+        # pkgs.${system}.zathura
+      ]);
     in
     {
       devShells = for_each_system (system: {
         default = pkgs.${system}.mkShell {
           name = "tex_in_live shell";
-          buildInputs = [
-            tex_pkgs.${system}
-          ];
+          buildInputs = [ ] ++ general_pkgs.${system};
         };
       });
 
@@ -48,7 +47,7 @@
             if ! pgrep -x "zathura" > /dev/null; then
               ${pkgs.${system}.zathura}/bin/zathura result_watch/main.pdf &
             fi
-            exec ${tex_pkgs.${system}}/bin/latexmk -pvc -pdf -outdir=result_watch main.tex
+            exec ${general_pkgs.${system}}/bin/latexmk -pvc -pdf -outdir=result_watch main.tex
             find | grep "eps-converted-to.pdf" | xargs rm
           ''}";
         };
@@ -67,7 +66,7 @@
       #   default = pkgs.${system}.writeShellScriptBin "latex-build" ''
       #     rm -r result
       #     mkdir -p result
-      #     exec ${tex_pkgs.${system}}/bin/latexmk -pdf -outdir=result main.tex
+      #     exec ${general_pkgs.${system}}/bin/latexmk -pdf -outdir=result main.tex
       #   '';
       # });
 
@@ -78,7 +77,7 @@
 
           src = ./.;
 
-          buildInputs = [ tex_pkgs.${system} ];
+          buildInputs = [ ] ++ general_pkgs.${system};
 
           buildPhase = ''
             echo "📦 Building your document..."
