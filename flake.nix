@@ -14,18 +14,22 @@
     let
       supportedSystems = [
         "x86_64-linux"
-        "x86_64-darwin"
         "aarch64-linux"
+        "x86_64-darwin"
         "aarch64-darwin"
       ];
 
       for_each_system = nixpkgs.lib.genAttrs supportedSystems;
 
       pkgs = for_each_system (system: import nixpkgs { inherit system; });
-      general_pkgs = for_each_system (system: [
+      tex_pkg = for_each_system (
+        system:
         (pkgs.${system}.texlive.combine {
           inherit (pkgs.${system}.texlive) scheme-full abntex2;
         })
+      );
+      general_pkgs = for_each_system (system: [
+        tex_pkg.${system}
         pkgs.${system}.material-design-icons
         # pkgs.${system}.zathura
       ]);
@@ -47,7 +51,7 @@
             if ! pgrep -x "zathura" > /dev/null; then
               ${pkgs.${system}.zathura}/bin/zathura result_watch/main.pdf &
             fi
-            exec ${general_pkgs.${system}}/bin/latexmk -pvc -pdf -outdir=result_watch main.tex
+            exec ${tex_pkg.${system}}/bin/latexmk -pvc -pdf -outdir=result_watch main.tex
             find | grep "eps-converted-to.pdf" | xargs rm
           ''}";
         };
